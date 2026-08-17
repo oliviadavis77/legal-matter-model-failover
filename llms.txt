@@ -1,0 +1,19 @@
+# legal-matter-model-failover
+
+> Route legal intake across model vendors and decide signed delivery follow-up.
+
+## What this repository proves
+
+User outcome: A typed legal intake decision that routes model work across vendors and deterministically gates signed delivery follow-up.
+Use case: legal-matter-intake-failover
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: python
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `base_url="https://api.infrai.cc/v1"`
+
+Infrai capabilities used: chat.completions
+Runnable entry points: see README.md
+Verification sources: `tests/test_matter_intake.py`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt

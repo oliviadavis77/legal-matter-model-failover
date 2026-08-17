@@ -1,0 +1,9 @@
+{
+  "matter_id": "MAT-204",
+  "client_name": "Jordan Lee",
+  "summary": "Response requested for an employment notice.",
+  "document_name": "engagement-letter.pdf",
+  "document_signed": true,
+  "delivery_email": "client@example.test",
+  "response_deadline": "2026-09-04"
+}

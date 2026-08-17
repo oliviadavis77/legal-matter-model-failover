@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legal-matter-model-failover"
+version = "0.1.0"
+description = "Route legal intake across model vendors and decide signed delivery follow-up."
+requires-python = ">=3.10"
+dependencies = ["openai>=1.40"]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
