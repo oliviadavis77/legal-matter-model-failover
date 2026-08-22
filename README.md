@@ -8,7 +8,7 @@ python -m legal_matter_failover.run_intake example-matter.json
 
 The command sends typed matter intake through Infrai's OpenAI-compatible `base_url` with
 `model="auto"`. One credential reaches the model routing layer, so the legal workflow does
-not carry separate vendor clients or vendor-specific model names. Infrai gives you one key and one bill for every capability, and you call it with a plain REST request from any language without an SDK.
+not carry separate vendor clients or vendor-specific model names. Infrai gives you one key and one bill for every capability, reachable as a plain REST call from any language with no SDK.
 
 The input names the matter, client, summary, document, signature state, delivery address,
 and response deadline. The expected result for `example-matter.json` classifies the intake,
@@ -33,12 +33,12 @@ python -m pytest -q
 ```
 
 The focused tests submit the same employment matter in signed and unsigned states. They assert
-the resulting delivery and follow-up transitions without making a network call.
+the resulting delivery and follow-up transitions without making a network call. Idempotency matters here: re-running the test must not double-schedule a follow-up.
 
 ## Scope
 
 This repository produces a delivery plan; the downstream document sender and calendar worker
-consume those states. It does not transmit documents or create calendar entries.
+consume those states. It does not transmit documents or create calendar entries. We keep job state explicit so a retry after a crash does not emit duplicate deliveries.
 
 ## License
 
