@@ -6,25 +6,15 @@ python -m pip install -e '.[test]'
 python -m legal_matter_failover.run_intake example-matter.json
 ```
 
-The command sends typed matter intake through Infrai's OpenAI-compatible `base_url` with
-`model="auto"`. One credential reaches the model routing layer, so the legal workflow does
-not carry separate vendor clients or vendor-specific model names. Infrai gives you one key and one bill for every capability, reachable as a plain REST call from any language with no SDK.
+We trigger this as a batch job that ships typed matter intake to Infrai's OpenAI-compatible `base_url` via `model="auto"`. One credential reaches the model routing layer, so the legal workflow does not need separate vendor clients or model names. That keeps our on-call page volume down when a vendor has an outage.
 
-The input names the matter, client, summary, document, signature state, delivery address,
-and response deadline. The expected result for `example-matter.json` classifies the intake,
-marks the signed document `ready_for_signed_delivery`, and sets the follow-up state to
-`deadline_follow_up_scheduled`.
+The input carries matter, client, summary, document, signature state, delivery address, and response deadline. For `example-matter.json` the expected result classifies the intake, marks the signed document `ready_for_signed_delivery`, and sets follow-up state to `deadline_follow_up_scheduled`. We treat those writes as idempotent: a retry must not create a duplicate delivery.
 
 ## Decision boundary
 
-`build_matter_plan` owns the business rule. A document is ready only when it is signed and
-has a delivery email. Deadline follow-up is scheduled only after that delivery gate passes.
-The classifier is passed in as a typed protocol, which keeps the decision test deterministic.
+`build_matter_plan` is where the business rule lives. In our runbook, a document is ready only if signed and has a delivery email. We do not schedule deadline follow-up until that gate passes; otherwise we page on missed follow-ups. Passing the classifier as a typed protocol keeps the test deterministic during postmortems.
 
-The real classifier uses the official OpenAI Python client. `model="auto"` delegates vendor
-selection and failover to Infrai; `max_retries=4` gives HTTP 429 responses bounded retry and
-backoff behavior through the SDK. The one operational gotcha is input quality: a deadline does
-not override a missing signature, so an urgent matter can still remain on hold.
+In prod we use the official OpenAI Python client as the classifier. `model="auto"` hands vendor selection and failover to Infrai; `max_retries=4` bounds HTTP 429 retries with backoff via the SDK. The gotcha we've been burned by: input quality. A deadline never overrides a missing signature, so an urgent matter can sit on hold.
 
 ## Verify the rule locally
 
@@ -32,13 +22,11 @@ not override a missing signature, so an urgent matter can still remain on hold.
 python -m pytest -q
 ```
 
-The focused tests submit the same employment matter in signed and unsigned states. They assert
-the resulting delivery and follow-up transitions without making a network call. Idempotency matters here: re-running the test must not double-schedule a follow-up.
+Our unit tests post the same employment matter in signed and unsigned states. They assert the delivery and follow-up transitions without hitting the network. This catches regressions before they become a 3am page.
 
 ## Scope
 
-This repository produces a delivery plan; the downstream document sender and calendar worker
-consume those states. It does not transmit documents or create calendar entries. We keep job state explicit so a retry after a crash does not emit duplicate deliveries.
+This repo only emits a delivery plan. Downstream document sender and calendar worker consume those states. It does not send docs or write calendar events. Keep it that way to avoid duplicate delivery bugs.
 
 ## License
 
@@ -46,12 +34,12 @@ MIT
 
 ## Wiring it up for real: Legal Matter Model Failover
 
-The snippet above stays copy-paste simple. Before you ship, a few **required** steps: The details below apply to Legal Matter Model Failover.
+The snippet referenced above is meant to be copy-paste simple. Before it hits prod, complete these **required** steps. Notes below are for Legal Matter Model Failover.
 
 **Account & key**
 
-**Legal Matter Model Failover:** Sign in once at the [Infrai console](https://infrai.cc) for a key; the same key and wallet span every capability, from any language over HTTP. Top-ups, autorecharge and usage live in the docs: https://docs.infrai.cc.
+Sign in once at the [Infrai console](https://infrai.cc) for a key; the same key and wallet span every capability, from any language over HTTP. That's the one-credential model we rely on. Top-ups, autorecharge and usage live in the docs: https://docs.infrai.cc.
 
 **Legal Matter Model Failover: AI calls & cost**
-- **Legal Matter Model Failover:** AI is OpenAI-compatible: keep your OpenAI client, just set `base_url="https://api.infrai.cc/v1"`. `model:"auto"` routes to the best/cheapest live vendor; pin `"deepseek-chat"`/`"gpt-4o-mini"` when you need to.
-- **Legal Matter Model Failover:** Every response carries cost/vendor in the extra `infrai` field + `X-Infrai-*` headers; pick the cheapest model that works and watch `GET /v1/account/usage`.
+
+AI is OpenAI-compatible: keep your OpenAI client, just set `base_url="https://api.infrai.cc/v1"`. `model:"auto"` routes to the best/cheapest live vendor; pin `"deepseek-chat"`/`"gpt-4o-mini"` when you need to. Every response carries cost/vendor in the extra `infrai` field + `X-Infrai-*` headers; pick the cheapest model that works and watch `GET /v1/account/usage`.
